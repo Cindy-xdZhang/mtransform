@@ -17,6 +17,7 @@ import time
 import os
 import network 
 from optimiser import ScheduledOptim
+USE_CUDA = torch.cuda.is_available()  
 def str2bool(v):
     """ str2bool """
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -65,6 +66,10 @@ def main():
     print("-building model ...")
     crit=nn.CrossEntropyLoss(ignore_index=PAD_token)
     model=network.Transformer(config,DataSet.voc.n_words,crit)
+    if  config.use_gpu and USE_CUDA :
+        print('**work with solo-GPU **')
+        network.Global_device = torch.device("cuda:0" )
+        model.to(network.Global_device)
     optimizer = ScheduledOptim(
             optim.Adam(model.parameters(), betas=(0.9, 0.98), eps=1e-09),
             config.lr, config.embedding_size, config.n_warmup_steps)

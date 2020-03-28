@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from sublayers import *
 from data_loader import MAX_LENGTH
 from torch.nn.utils.rnn import pad_sequence
+Global_device="cpu"
 def get_attn_pad_mask(seq_q, seq_k):
     #[B,LQ]  B,LQ,E * B,E,LK->B,LQ,LK 
     #[B,LK]
@@ -83,8 +84,7 @@ class TransformerDecoder(nn.Module):
         slf_attn_mask=padding_mask(dec_input)
         sq_mask=sequence_mask(dec_input)
 
-        slf_attn_mask=torch.gt((slf_attn_mask+ sq_mask), 0)
-
+        slf_attn_mask = (torch.gt((slf_attn_mask.float() + sq_mask.float()), 0)).float()
         enc_dec_mask=get_attn_pad_mask(dec_input,enc_input)
 
         output=self.Positional_Encoding(self.char_embedding(dec_input))
@@ -117,8 +117,8 @@ class Transformer(nn.Module):
             for idx,batch in enumerate(dataloader):
                 optimizer.zero_grad()
                 batchQ,batchA=batch['Q'],batch['A']
-                batchQ = pad_sequence(batchQ,batch_first=True, padding_value=0)
-                batchA = pad_sequence(batchA,batch_first=True, padding_value=0)
+                batchQ = pad_sequence(batchQ,batch_first=True, padding_value=0).to(Global_device)
+                batchA = pad_sequence(batchA,batch_first=True, padding_value=0).to(Global_device)
                 loss=self.call(batchQ,batchA)
                 loss.backward()
                 print("epoch " +str(ep) +" - batch ["+str(idx)+"/"+str(len(dataloader))  +"] Loss " +str(loss.item()) )
