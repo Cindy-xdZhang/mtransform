@@ -55,6 +55,7 @@ def arg_config():
     misc_arg.add_argument('-s',"--save_iteration", type=int, default=40,help='Every save_iteration iteration(s) save checkpoint model ')   
     #路径参数
     misc_arg.add_argument('-con',"--continue_training", type=str, default=" ")
+    misc_arg.add_argument('-log',"--logfile_path", type=str, default=os.path.join(project_root_dir,"log.txt"))
     config = parser.parse_args()
     return config
 def main():

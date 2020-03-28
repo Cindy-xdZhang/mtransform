@@ -7,6 +7,7 @@
 #@version   :0.1
 #'''
 import torch
+import time
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
@@ -111,15 +112,27 @@ class Transformer(nn.Module):
         dec_logits = self.final_softmax(self.tgt_proj(dec_out)) 
         loss=self.criterion(dec_logits.contiguous().view(dec_logits.size(0)*dec_logits.size(1),-1),dec_target.contiguous().view(-1))
         return loss
-    def train(self,dataloader,optimizer):
+    def train(self,train_loader,optimizer):
         start_epoch=0
-        for ep in range(start_epoch,self.config.end_epoch):
-            for idx,batch in enumerate(dataloader):
+        stage_total_loss=0
+        for epoch in range(start_epoch,self.config.end_epoch):
+            for batch_idx,batch in enumerate(train_loader):
                 optimizer.zero_grad()
                 batchQ,batchA=batch['Q'],batch['A']
                 batchQ = pad_sequence(batchQ,batch_first=True, padding_value=0).to(Global_device)
                 batchA = pad_sequence(batchA,batch_first=True, padding_value=0).to(Global_device)
                 loss=self.call(batchQ,batchA)
                 loss.backward()
-                print("epoch " +str(ep) +" - batch ["+str(idx)+"/"+str(len(dataloader))  +"] Loss " +str(loss.item()) )
                 optimizer.step_and_update_lr()
+                stage_total_loss+=loss.cpu().item() 
+                if batch_idx % self.config.log_steps == 0:
+                    print_loss_avg = (stage_total_loss / self.config.log_steps)
+                    print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\ttime: {}'.format(
+                        epoch, batch_idx , len(train_loader),
+                        100. * batch_idx / len(train_loader), print_loss_avg, time.asctime(time.localtime(time.time())) ))
+                    with open(self.config.logfile_path,'a') as f:
+                        template=' Train Epoch: {} [{}/{}]\tLoss: {:.6f}\ttime: {}\n'
+                        str=template.format(epoch,batch_idx , len(train_loader),print_loss_avg,\
+                            time.asctime(time.localtime(time.time())))
+                        f.write(str)
+                    stage_total_loss=0
